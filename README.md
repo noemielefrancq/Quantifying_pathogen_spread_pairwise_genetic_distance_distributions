@@ -1,2 +1,2 @@
-# Quantifying_pathogen_spread_pairwise_genetic_distance_distributions
+# Quantifying pathogen spread across scales from pairwise genetic distance distributions
 Code of the paper "Quantifying pathogen spread across scales from pairwise genetic distance distributions"
