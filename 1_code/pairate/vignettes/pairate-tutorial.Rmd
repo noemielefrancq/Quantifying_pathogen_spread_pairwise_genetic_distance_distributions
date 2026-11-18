@@ -1,0 +1,239 @@
+---
+title: "Getting started with pairate"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with pairate}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Introduction
+
+**pairate** estimates migration rates between discrete demes (populations)
+from a phylogenetic tree. Instead of reconstructing ancestral states at
+internal nodes, it works with *pairwise distances* between tips:
+
+1. Compute, for each pair of demes (a, b), histograms of pairwise distances
+   within a, within b and between a and b, and the number of pairs of each
+   type.
+2. Fit a continuous-time Markov chain (CTMC) migration model using Bayesian
+   inference (Stan / CmdStan). The between-deme histogram is compared to a
+   reference distance distribution: the distances of random pairs in a
+   population where the two demes are equally represented (within-a,
+   within-b and between pairs in proportions 1/4, 1/4 and 1/2, each
+   histogram divided by its number of pairs), so the estimates do not depend
+   on how many sequences are sampled per deme.
+
+Two substitution models are available:
+
+- **ER** (equal rates) -- a single migration rate for all deme pairs.
+- **SYM** (symmetric) -- one rate per unordered deme pair (A-B = B-A).
+
+Custom rate structures can be given as a numeric matrix (see `?fit_hist_model`).
+
+## Setup
+
+```{r load}
+library(pairate)
+library(ape)
+```
+
+The package includes an example phylogeny simulated under a structured
+coalescent with three demes (A, B, C; 500 tips each, sampled at the same time),
+with migration rates 0.1 between A and B, 0.1 between A and C, and 0.01 between
+B and C. The deme of each tip is the end of its label. In practice you would
+read your own tree, for example from a BEAST analysis using `treeio::read.beast()`.
+
+```{r example-tree}
+tree = read.tree(system.file("extdata", "example_tree.nwk", package = "pairate"))
+traits = sub(".*_", "", tree$tip.label)
+demes = sort(unique(traits))
+table(traits)
+```
+
+## Computing histograms
+
+The first step is to compute pairwise distance histograms. The function
+`compute_histograms()` builds, for each unordered deme pair, the within-a,
+within-b and between-ab histograms (`pair_hists`), together with an overall
+same vs different histogram used for plots and to choose the number of bins.
+Use `compute_histograms_from_dist()` instead when you have a distance matrix
+rather than a tree.
+
+```{r compute-histograms}
+pre_h = compute_histograms(
+  tree     = tree,
+  traits   = traits,
+  demes    = demes,
+  bootstrap = 0,
+  plot_ratio = FALSE,
+  verbose  = TRUE
+)
+```
+
+The result is a list containing the histogram data, common bin breaks,
+and metadata:
+
+```{r inspect-histograms}
+names(pre_h)
+head(pre_h$hists_all$hist_data)
+pre_h$pair_hists$n_between
+cat("Number of bins to fit:", pre_h$n_bins_to_fit, "\n")
+cat("Demes in tree:", pre_h$demes_in_tree, "\n")
+```
+
+## Visualising raw data
+
+Before fitting a model, it is useful to inspect the **ratio** of
+same-deme (within-deme pairs, weighted by their numbers of pairs) to
+different-deme proportions across distance bins. A ratio
+above 1 at short distances indicates that closely related sequences tend
+to share the same deme -- the hallmark of limited migration.
+
+```{r plot-ratios-data, fig.height=4}
+plot_ratios_data(pre_h)
+```
+
+## Fitting constant-rate models
+
+Now we fit migration models. Below we fit both model types. Each
+call compiles a Stan model (cached after first use), runs MCMC, and
+prints diagnostics and rate estimates.
+
+We use small iteration counts here to keep the vignette fast.
+
+```{r fit-models, results='hide', message=FALSE}
+# Equal-rates model
+results_ER = fit_hist_model(
+  tree   = tree,
+  traits = traits,
+  demes  = demes,
+  model  = "ER",
+  precomputed_hists = pre_h,
+  chains = 1, iter_warmup = 500, iter_sampling = 500, refresh = 0,
+  verbose = FALSE
+)
+
+# Symmetric model
+results_SYM = fit_hist_model(
+  tree   = tree,
+  traits = traits,
+  demes  = demes,
+  model  = "SYM",
+  precomputed_hists = pre_h,
+  chains = 1, iter_warmup = 500, iter_sampling = 500, refresh = 0,
+  verbose = FALSE
+)
+```
+
+## Diagnostics and results
+
+After fitting, check convergence diagnostics and inspect rate estimates:
+
+```{r diagnostics}
+print_diagnostics(results_SYM)
+print_estimates(results_SYM)
+```
+
+Posterior draws are in `results_SYM$chains`, e.g. `rates` (one column per
+rate) and `cr`, the colocation ratio for each pair and distance bin (the
+probability that the ancestors of a between-deme pair are in the same deme,
+relative to the reference, where the two demes are equally represented).
+
+The rate index matrix shows which rate parameter governs each pair:
+
+```{r rate-index}
+results_SYM$rate_index
+```
+
+## Model comparison with WAIC
+
+Use `compute_waic()` to compare models via the Widely Applicable
+Information Criterion:
+
+```{r waic}
+waic_ER  = compute_waic(results_ER)
+waic_SYM = compute_waic(results_SYM)
+
+print(waic_ER)
+print(waic_SYM)
+```
+
+## Plotting model fits
+
+Two plotting functions let you visually assess fit quality:
+
+- `plot_proportion_fits()` -- observed vs predicted histogram proportions
+  (log-log scatter).
+- `plot_ratios_fit()` -- observed vs predicted same/different ratio across
+  distance bins.
+
+```{r plot-fits}
+plot_proportion_fits(results_SYM, plot_ci = TRUE)
+plot_ratios_fit(results_SYM, same_y_lim = TRUE)
+```
+
+Both return the observed and predicted values (pairs x bins). Use `plot = FALSE`
+to only retrieve them:
+
+```{r fit-values}
+fit_values = plot_ratios_fit(results_SYM, plot = FALSE)
+dim(fit_values$ratio_predicted)
+```
+
+## Using real phylogenies
+
+In practice, you would load a BEAST tree file:
+
+```{r real-tree, eval = FALSE}
+library(treeio)
+
+tree_data = read.beast("path/to/your/tree.tree")
+tree = tree_data[[1]]@phylo
+tip_info = as.data.frame(tree_data[[1]]@data)
+tip_info = tip_info[match(1:(tree$Nnode + 1), tip_info$node), ]
+
+traits = as.character(tip_info$type)
+times  = as.numeric(tip_info$time)
+demes  = sort(unique(traits))
+
+results = fit_hist_model(
+  tree   = tree,
+  traits = traits,
+  times  = times,
+  demes  = demes,
+  model  = "SYM"
+)
+```
+
+## Bootstrap uncertainty
+
+To propagate sampling uncertainty, use `bootstrap > 0` when computing
+histograms. In each replicate, the sequences of each deme are resampled with
+replacement at the deme's own size, and the model is fitted jointly across
+replicates, averaging their log-likelihoods:
+
+```{r bootstrap, eval = FALSE}
+pre_h_boot = compute_histograms(
+  tree        = tree,
+  traits      = traits,
+  demes       = demes,
+  bootstrap   = 50,
+  verbose     = TRUE
+)
+
+results_boot = fit_hist_model(
+  model     = "SYM",
+  bootstrap = 50,
+  precomputed_hists = pre_h_boot
+)
+```
