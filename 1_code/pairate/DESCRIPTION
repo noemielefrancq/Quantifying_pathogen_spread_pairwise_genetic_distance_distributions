@@ -1,0 +1,13 @@
+Package: pairate
+Type: Package
+Title: Inferring Transition Rates Between Discrete States from Pairwise Genetic Distances
+Version: 0.0.1
+Authors@R: c(person(given = "Noemie", family = "Lefrancq", role = c("aut", "cre"), email = "noemie.lefrancq@bsse.ethz.ch"))
+Description: Tools to compute pairwise distance histograms from phylogenies and fit transition rate models in Stan.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports: ape, cmdstanr, loo, Matrix
+Suggests: testthat (>= 3.0.0), knitr, rmarkdown
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+RoxygenNote: 7.3.2

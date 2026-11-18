@@ -1,0 +1,44 @@
+<beast version="2.0"
+       namespace="beast.base.inference:beast.base.inference.parameter:remaster
+                  :beast.base.evolution.tree.coalescent
+                  :feast.popmodels">
+  <run spec="Simulator" nSims="Ntreessim">      
+    <simulate id="tree" spec="SimulatedTree">
+      <trajectory  id="traj" spec="CoalescentTrajectory" maxTrajLogAge="10">
+          
+        <population id="A" spec="CompoundPopulationModel" changeTimes="TSTART">
+          <populationModel spec="ExponentialGrowth" popSize="NA" growthRate="RA"/>
+          <populationModel spec="ConstantPopulation" popSize="1.0"/>
+        </population>  
+          
+        <population id="B" spec="CompoundPopulationModel" changeTimes="TSTART">
+          <populationModel spec="ExponentialGrowth" popSize="NB" growthRate="RB"/>
+          <populationModel spec="ConstantPopulation" popSize="1.0"/>
+        </population>  
+          
+        <population id="C" spec="CompoundPopulationModel" changeTimes="TSTART">
+          <populationModel spec="ExponentialGrowth" popSize="NC" growthRate="RC"/>
+          <populationModel spec="ConstantPopulation" popSize="1.0"/>
+        </population>  
+          
+        <reaction spec="Reaction" rate="mAB"> A -> B </reaction>
+        <reaction spec="Reaction" rate="mAB"> B -> A </reaction>
+
+        <reaction spec="Reaction" rate="mAC"> A -> C </reaction>
+        <reaction spec="Reaction" rate="mAC"> C -> A </reaction>
+          
+        <reaction spec="Reaction" rate="mBC"> B -> C </reaction>
+        <reaction spec="Reaction" rate="mBC"> C -> B </reaction>
+
+        <reaction spec="PunctualReaction" n="NsamplesA" times="0">0 -> A</reaction>
+        <reaction spec="PunctualReaction" n="NsamplesB" times="0">0 -> B</reaction>
+        <reaction spec="PunctualReaction" n="NsamplesC" times="0">0 -> C</reaction>
+
+      </trajectory >
+    </simulate>
+      
+    <logger fileName="Name_sim.tree" mode="tree">
+      <log spec="TypedTreeLogger" tree="@tree" removeSingletonNodes="true"/>
+    </logger>
+  </run>
+</beast>

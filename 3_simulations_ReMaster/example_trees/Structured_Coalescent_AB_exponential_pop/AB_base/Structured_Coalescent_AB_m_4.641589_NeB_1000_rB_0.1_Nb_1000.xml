@@ -1,0 +1,33 @@
+<beast version="2.0"
+       namespace="beast.base.inference:beast.base.inference.parameter:remaster
+                  :beast.base.evolution.tree.coalescent
+                  :feast.popmodels">
+  <run spec="Simulator" nSims="10">      
+    <simulate id="tree" spec="SimulatedTree">
+      <trajectory  id="traj" spec="CoalescentTrajectory" maxTrajLogAge="10">
+        <population id="A" spec="ExponentialGrowth" popSize="1000" growthRate="0.1"/>
+        <population id="B" spec="ExponentialGrowth" popSize="1000" growthRate="0.1"/>
+          
+        <!--<population id="A" spec="CompoundPopulationModel" changeTimes="10000">
+          <populationModel spec="ExponentialGrowth" popSize="1000" growthRate="0.1"/>
+          <populationModel spec="ConstantPopulation" popSize="1.0"/>
+        </population> --> 
+          
+        <!-- <population id="B" spec="CompoundPopulationModel" changeTimes="10000">
+          <populationModel spec="ExponentialGrowth" popSize="1000" growthRate="0.1"/>
+           <populationModel spec="ConstantPopulation" popSize="1.0"/> 
+        </population>  -->
+          
+        <reaction spec="Reaction" rate="4.641589"> A -> B </reaction>
+        <reaction spec="Reaction" rate="4.641589"> B -> A </reaction>
+
+        <reaction spec="PunctualReaction" n="1000" times="0">0 -> A</reaction>
+        <reaction spec="PunctualReaction" n="1000" times="0">0 -> B</reaction>
+      </trajectory >
+    </simulate>
+      
+    <logger fileName="Structured_Coalescent_AB_m_4.641589_NeB_1000_rB_0.1_Nb_1000.tree" mode="tree">
+      <log spec="TypedTreeLogger" tree="@tree" removeSingletonNodes="true"/>
+    </logger>
+  </run>
+</beast>

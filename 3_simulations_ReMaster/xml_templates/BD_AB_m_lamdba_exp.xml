@@ -1,0 +1,36 @@
+<beast version="2.0" namespace="beast.base.inference:beast.base.inference.parameter:remaster">
+    
+  <run spec="Simulator" nSims="Ntreessim">
+      
+    <simulate id="tree" spec="SimulatedTree">
+        
+      <trajectory id="trajectory" spec="StochasticTrajectory" endsWhen="A&gt;1000 &amp;&amp; B&gt;1000" mustHave="samp&gt;50 &amp;&amp; samp&lt;10000" maxRetries="1000">
+          
+        <population id="A" spec="RealParameter" value="1"/>
+        <population id="B" spec="RealParameter" value="0"/>
+        <samplePopulation id="samp" spec="RealParameter" value="0"/>
+
+        <reaction spec="Reaction" rate="RA1 RA2" changeTimes = "TSTART"> A -> 2A </reaction>
+        <reaction spec="Reaction" rate="DeathA"> A -> 0 </reaction>
+          
+        <reaction spec="Reaction" rate="RB1 RB2" changeTimes = "TSTART"> B -> 2B </reaction>
+        <reaction spec="Reaction" rate="DeathB"> B -> 0 </reaction>
+        
+        <reaction spec="Reaction" rate="m"> A -> B </reaction>
+        <reaction spec="Reaction" rate="m"> B -> A </reaction>
+
+        <reaction spec="Reaction" rate="0 SampRateA" changeTimes = "TSTART"> A -> samp + A </reaction>
+        <reaction spec="Reaction" rate="0 SampRateB" changeTimes = "TSTART"> B -> samp + B </reaction>
+      </trajectory>
+    </simulate>
+
+    <logger fileName="Name_sim.tree" mode="tree">
+      <log spec="TypedTreeLogger" tree="@tree" removeSingletonNodes="true"/>
+    </logger>
+    <logger fileName="Name_sim.traj">
+      <log idref="trajectory"/>
+    </logger>
+  </run>
+</beast>
+
+

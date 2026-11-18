@@ -1,0 +1,23 @@
+<beast version="2.0"
+       namespace="beast.base.inference:beast.base.inference.parameter:remaster
+                  :beast.base.evolution.tree.coalescent
+                  :feast.popmodels">
+  <run spec="Simulator" nSims="Ntreessim">      
+    <simulate id="tree" spec="SimulatedTree">
+      <trajectory  id="traj" spec="CoalescentTrajectory" maxTrajLogAge="10">
+        <population id="A" spec="ConstantPopulation" popSize="NA"/>
+        <population id="B" spec="ConstantPopulation" popSize="NB"/>
+
+        <reaction spec="Reaction" rate="m"> A -> B </reaction>
+        <reaction spec="Reaction" rate="m"> B -> A </reaction>
+
+        <reaction spec="PunctualReaction" n="NsamplesA" times="0">0 -> A</reaction>
+        <reaction spec="PunctualReaction" n="NsamplesB" times="0">0 -> B</reaction>
+      </trajectory >
+    </simulate>
+      
+    <logger fileName="Name_sim.tree" mode="tree">
+      <log spec="TypedTreeLogger" tree="@tree" removeSingletonNodes="true"/>
+    </logger>
+  </run>
+</beast>
